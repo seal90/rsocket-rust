@@ -1,4 +1,4 @@
-# RSocket Transport For TCP
+# RSocket Transport For Unix Domain Socket
 
 ## Example
 
@@ -8,7 +8,7 @@ Add dependencies in your `Cargo.toml`.
 [dependencies]
 tokio = "0.2.21"
 rsocket_rust = "0.5.3"
-rsocket_rust_transport_tcp = "0.5.3"
+rsocket_rust_transport_unix = "0.5.3"
 ```
 
 ### Server
@@ -16,12 +16,13 @@ rsocket_rust_transport_tcp = "0.5.3"
 ```rust
 use log::info;
 use rsocket_rust::prelude::{EchoRSocket, RSocketFactory, ServerResponder};
-use rsocket_rust_transport_tcp::TcpServerTransport;
+use rsocket_rust_transport_unix::UnixServerTransport;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
-    let transport: TcpServerTransport = TcpServerTransport::from("127.0.0.1:7878");
+
+    let transport: UnixServerTransport = UnixServerTransport::from("/tmp/rsocket-uds.sock");
 
     let responder: ServerResponder = Box::new(|setup, _socket| {
         info!("accept setup: {:?}", setup);
@@ -50,16 +51,17 @@ async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
 ```rust
 use log::info;
 use rsocket_rust::prelude::{ClientResponder, EchoRSocket, Payload, RSocket, RSocketFactory};
-use rsocket_rust_transport_tcp::TcpClientTransport;
+use rsocket_rust_transport_unix::UnixClientTransport;
 use std::error::Error;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn Error + Send + Sync>> {
+    
     let responder: ClientResponder = Box::new(|| Box::new(EchoRSocket));
 
     let client = RSocketFactory::connect()
         .acceptor(responder)
-        .transport(TcpClientTransport::from("127.0.0.1:7878"))
+        .transport(UnixClientTransport::from("/tmp/rsocket-uds.sock"))
         .setup(Payload::from("READY!"))
         .mime_type("text/plain", "text/plain")
         .start()
