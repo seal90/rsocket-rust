@@ -27,7 +27,7 @@ impl ServerTransport for UnixServerTransport {
         Self::Item: ClientTransport + Sized,
     {
         Box::pin(async move {
-            match UnixListener::bind(&self.addr.as_str()){
+            match UnixListener::bind(&self.addr.as_str()) {
                 Ok(mut listener) => {
                     debug!("listening on: {}", &self.addr);
                     if let Some(mut bingo) = starter {
@@ -37,7 +37,7 @@ impl ServerTransport for UnixServerTransport {
                         let tp = UnixClientTransport::from(socket);
                         acceptor(tp);
                     }
-                    
+
                     Ok(())
                 }
                 Err(e) => Err(e.into_inner().unwrap()),
@@ -51,11 +51,6 @@ impl Drop for UnixServerTransport {
         std::fs::remove_file(&self.addr.as_str()).unwrap();
     }
 }
-// impl From<SocketAddr> for UnixServerTransport {
-//     fn from(addr: SocketAddr) -> UnixServerTransport {
-//         UnixServerTransport::new(addr)
-//     }
-// }
 
 impl From<String> for UnixServerTransport {
     fn from(addr: String) -> UnixServerTransport {
