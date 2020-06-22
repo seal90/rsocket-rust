@@ -3,7 +3,11 @@ use rsocket_rust::transport::{ClientTransport, ServerTransport};
 use std::error::Error;
 use std::future::Future;
 use std::pin::Pin;
+use std::path::Path;
+use std::sync::atomic::{AtomicBool, Ordering};
 use tokio::net::UnixListener;
+
+static STARTED: AtomicBool = AtomicBool::new(false);
 
 pub struct UnixServerTransport {
     addr: String,
@@ -26,10 +30,17 @@ impl ServerTransport for UnixServerTransport {
     where
         Self::Item: ClientTransport + Sized,
     {
+        let socket_file_exists = Path::new(&self.addr).exists();
+        if socket_file_exists {
+            panic!("{} already exists", &self.addr)
+        }
+
         Box::pin(async move {
             match UnixListener::bind(&self.addr.as_str()) {
                 Ok(mut listener) => {
                     debug!("listening on: {}", &self.addr);
+                    STARTED.store( true,Ordering::Relaxed);
+
                     if let Some(mut bingo) = starter {
                         bingo();
                     }
@@ -48,7 +59,9 @@ impl ServerTransport for UnixServerTransport {
 
 impl Drop for UnixServerTransport {
     fn drop(&mut self) {
-        std::fs::remove_file(&self.addr.as_str()).unwrap();
+        if STARTED.load(Ordering::Relaxed) {
+            std::fs::remove_file(&self.addr.as_str()).unwrap();
+        }
     }
 }
 
